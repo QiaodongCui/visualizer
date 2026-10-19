@@ -55,12 +55,14 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 class Api:
+    # Attributes must be private: pywebview exposes public ones to JavaScript and
+    # would recurse into the native window object, freezing the app.
     def __init__(self):
-        self.window = None
+        self._window = None
 
     def set_title(self, title):
-        if self.window:
-            self.window.title = title
+        if self._window:
+            self._window.title = title
 
 
 def main():
@@ -78,7 +80,7 @@ def main():
         title = f"{name} - {APP_NAME}"
 
     api = Api()
-    api.window = webview.create_window(title, url, js_api=api, width=1280, height=800)
+    api._window = webview.create_window(title, url, js_api=api, width=1280, height=800)
     webview.start(private_mode=True)
     server.shutdown()
 

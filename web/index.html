@@ -156,15 +156,23 @@ async function openFile(name, getBuffer) {
     const obj = await loader(buffer);
     setModel(obj);
     $('fileName').textContent = name;
-    document.title = `${name} - Model Viewer`;
-    window.pywebview?.api?.set_title(document.title);
     $('drop').style.display = 'none';
+    setWindowTitle(`${name} - Model Viewer`);
   } catch (err) {
     console.error(err);
     alert('Could not load file: ' + err.message);
   } finally {
     showStatus(null);
   }
+}
+
+// In the desktop app, also set the native window title. The pywebview bridge is
+// injected asynchronously, so wait for it if it isn't ready yet.
+function setWindowTitle(title) {
+  document.title = title;
+  const apply = () => window.pywebview.api.set_title(title).catch(() => {});
+  if (typeof window.pywebview?.api?.set_title === 'function') apply();
+  else window.addEventListener('pywebviewready', apply, { once: true });
 }
 
 function showStatus(msg) {
