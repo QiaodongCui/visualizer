@@ -7,7 +7,7 @@ $classes    = 'HKCU:\Software\Classes'
 
 Get-Process ModelViewer | Stop-Process -Force
 
-foreach ($ext in '.step', '.stp', '.obj', '.stl') {
+foreach ($ext in '.step', '.stp', '.obj', '.stl', '.msh') {
     Remove-ItemProperty -Path "$classes\$ext\OpenWithProgids" -Name $progId
     if ((Get-Item "$classes\$ext").GetValue('') -eq $progId) { Set-Item -Path "$classes\$ext" -Value '' }
 }

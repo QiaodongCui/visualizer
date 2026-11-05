@@ -1,6 +1,6 @@
 # Installs Model Viewer for the current user (no admin rights needed):
 #   - copies the app to %LOCALAPPDATA%\Programs\ModelViewer
-#   - registers it for .step/.stp/.obj/.stl (Open with + default when no other app is chosen)
+#   - registers it for .step/.stp/.obj/.stl/.msh (Open with + default when no other app is chosen)
 #   - adds a Start menu shortcut and an entry in Settings > Apps
 $ErrorActionPreference = 'Stop'
 
@@ -8,7 +8,7 @@ $src        = Join-Path $PSScriptRoot 'dist\ModelViewer'
 $installDir = Join-Path $env:LOCALAPPDATA 'Programs\ModelViewer'
 $exe        = Join-Path $installDir 'ModelViewer.exe'
 $progId     = 'ModelViewer.Model'
-$extensions = '.step', '.stp', '.obj', '.stl'
+$extensions = '.step', '.stp', '.obj', '.stl', '.msh'
 $classes    = 'HKCU:\Software\Classes'
 
 if (-not (Test-Path (Join-Path $src 'ModelViewer.exe'))) {

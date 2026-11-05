@@ -1,7 +1,10 @@
 # Model Viewer
 
-A simple Windows desktop viewer for **STEP (.step/.stp)**, **OBJ** and **STL** files.
+A simple Windows desktop viewer for **STEP (.step/.stp)**, **OBJ**, **STL** and **Gmsh (.msh)** files.
 
+- Gmsh meshes (MSH 2.2 and 4.1, ASCII or binary): shows the outer surface of the volume elements
+  (tet, hex, prism, pyramid) with every element edge, one color per physical group; surface-only meshes show their
+  triangles/quads. The info panel lists node and element counts.
 - Rotate (left-drag), pan (right-drag or Shift+left-drag), zoom (wheel), fit view (F)
 - Wireframe, edge overlay, grid/axes, Z-up toggle
 - Shows mesh/triangle count and bounding box
@@ -32,6 +35,7 @@ Uninstall from *Settings → Apps*, or run `uninstall.ps1`.
 | Path | Purpose |
 | --- | --- |
 | `web/index.html` | The viewer (three.js scene, loaders, UI) |
+| `web/msh.js` | Gmsh .msh reader (no dependencies) |
 | `web/vendor/` | Bundled three.js and occt-import-js |
 | `model_viewer.py` | Desktop wrapper: local HTTP server + native window, takes a file path argument |
 | `build.ps1` / `install.ps1` / `uninstall.ps1` | Build and per-user install scripts |

@@ -1,4 +1,4 @@
-"""Model Viewer desktop app: shows STEP / OBJ / STL files in a native window.
+"""Model Viewer desktop app: shows STEP / OBJ / STL / Gmsh MSH files in a native window.
 
 Usage: ModelViewer.exe [path-to-model]
 """

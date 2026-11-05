@@ -38,7 +38,7 @@
 </head>
 <body>
 <div id="toolbar">
-  <label class="btn">Open file…<input id="fileInput" type="file" accept=".stl,.obj,.step,.stp"></label>
+  <label class="btn">Open file…<input id="fileInput" type="file" accept=".stl,.obj,.step,.stp,.msh"></label>
   <button id="btnFit">Fit view</button>
   <button id="btnWire">Wireframe</button>
   <button id="btnEdges" class="on">Edges</button>
@@ -57,7 +57,7 @@
     <svg viewBox="0 0 16 16" width="16" height="16"><path d="M8 1.5 14 5v6l-6 3.5L2 11V5zM2 5l6 3.5L14 5M8 8.5v6"/></svg>
   </button>
 </div>
-<div id="drop">Drop a .step / .stp / .obj / .stl file here, or click “Open file…”</div>
+<div id="drop">Drop a .step / .stp / .obj / .stl / .msh file here, or click “Open file…”</div>
 <div id="status"></div>
 <div id="info"></div>
 <div id="help">Left-drag: rotate · Right-drag / Shift+drag: pan · Wheel: zoom · F: fit view · 1–7: views · O: ortho</div>
@@ -67,6 +67,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { parseMsh } from './msh.js';
 
 const $ = id => document.getElementById(id);
 const viewport = $('viewport');
@@ -164,7 +165,40 @@ async function loadSTEP(buffer) {
   return group;
 }
 
-const loaders = { stl: loadSTL, obj: loadOBJ, step: loadSTEP, stp: loadSTEP };
+// Colors for the element groups of a .msh file with more than one group.
+const GROUP_COLORS = [0xb8c4d0, 0xe0a370, 0x8fc488, 0xd88a9a, 0x9a9ce0, 0xd8cf7a, 0x7ccbcf, 0xc49ad6];
+
+// Gmsh mesh: shows the outer surface of each element group with all element edges.
+async function loadMSH(buffer) {
+  const msh = parseMsh(buffer);
+  const group = new THREE.Group();
+  msh.groups.forEach((g, i) => {
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(g.positions, 3));
+    geom.setIndex(new THREE.BufferAttribute(g.index, 1));
+    const mat = defaultMaterial();
+    mat.flatShading = true;  // facets show the element faces
+    mat.color.set(GROUP_COLORS[i % GROUP_COLORS.length]);
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.name = g.name;
+    const edges = new THREE.BufferGeometry();
+    edges.setAttribute('position', geom.attributes.position);
+    edges.setIndex(new THREE.BufferAttribute(g.edges, 1));
+    mesh.userData.edgeGeometry = edges;
+    group.add(mesh);
+  });
+  const tris = msh.groups.reduce((n, g) => n + g.index.length / 3, 0);
+  group.userData.infoRows = [
+    ['Format', msh.format],
+    ['Nodes', msh.nodes],
+    ...msh.elements,
+    ...(msh.groups.length > 1 ? [['Groups', msh.groups.length]] : []),
+    ['Surface tris', tris],
+  ];
+  return group;
+}
+
+const loaders = { stl: loadSTL, obj: loadOBJ, step: loadSTEP, stp: loadSTEP, msh: loadMSH };
 
 // `getBuffer` is an async function returning the file's ArrayBuffer.
 async function openFile(name, getBuffer) {
@@ -214,11 +248,11 @@ function setModel(obj) {
   if (current) { modelRoot.remove(current); disposeObject(current); }
   current = obj;
 
-  // Add edge overlay to each mesh.
+  // Add edge overlay to each mesh: sharp edges, or the loader's own (all element edges).
   obj.traverse(c => {
     if (c.isMesh) {
       const edges = new THREE.LineSegments(
-        new THREE.EdgesGeometry(c.geometry, 30),
+        c.userData.edgeGeometry ?? new THREE.EdgesGeometry(c.geometry, 30),
         new THREE.LineBasicMaterial({ color: 0x20252b }));
       edges.userData.isEdges = true;
       edges.visible = showEdges;
@@ -245,11 +279,15 @@ function updateInfo() {
   const box = new THREE.Box3().setFromObject(current);
   const size = box.getSize(new THREE.Vector3());
   const f = v => v.toPrecision(5);
-  $('info').textContent =
-    `Meshes:    ${meshes}\nTriangles: ${tris.toLocaleString()}\n` +
-    `Size:      ${f(size.x)} × ${f(size.y)} × ${f(size.z)}\n` +
-    `Min:       ${f(box.min.x)}, ${f(box.min.y)}, ${f(box.min.z)}\n` +
-    `Max:       ${f(box.max.x)}, ${f(box.max.y)}, ${f(box.max.z)}`;
+  const rows = [
+    ...(current.userData.infoRows ?? [['Meshes', meshes], ['Triangles', tris]]),
+    ['Size', `${f(size.x)} × ${f(size.y)} × ${f(size.z)}`],
+    ['Min', `${f(box.min.x)}, ${f(box.min.y)}, ${f(box.min.z)}`],
+    ['Max', `${f(box.max.x)}, ${f(box.max.y)}, ${f(box.max.z)}`],
+  ];
+  const width = Math.max(...rows.map(([label]) => label.length)) + 2;
+  $('info').textContent = rows.map(([label, value]) =>
+    (label + ':').padEnd(width) + value.toLocaleString()).join('\n');
 }
 
 // View directions (camera position relative to the model) in world space, which is
